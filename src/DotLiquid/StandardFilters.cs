@@ -347,6 +347,9 @@ namespace DotLiquid
 			if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(@string))
 				return input;
 
+            if(@string.Length == 1 && ((Char.IsPunctuation(@string[0]) || Char.IsSymbol(@string[0]))))
+                @string = string.Format("\\{0}", @string[0]);
+
 			return string.IsNullOrEmpty(input)
 				? input
 				: Regex.Replace(input, @string, replacement);
@@ -473,14 +476,28 @@ namespace DotLiquid
 			if (input == null)
 				return null;
 
+		    var @string = input.ToString();
+
 			if (format.IsNullOrWhiteSpace())
-				return input.ToString();
+				return @string;
 
 			DateTime date;
 
-			return DateTime.TryParse(input.ToString(), out date)
-				? Liquid.UseRubyDateFormat ? date.ToStrFTime(format) : date.ToString(format)
-				: input.ToString();
+            if (!DateTime.TryParse(@string, out date))
+            {
+                switch (@string.Trim('\'', '"').ToLowerInvariant())
+                {
+                    case "now":
+                        date = DateTime.Now;
+                        break;
+                    case "nowutc":
+                        date = DateTime.UtcNow;
+                        break;
+                    default:
+                        return @string;
+                }
+            }
+            return Liquid.UseRubyDateFormat ? date.ToStrFTime(format) : date.ToString(format);
 		}
 
 		/// <summary>
